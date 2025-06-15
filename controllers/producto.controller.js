@@ -1,66 +1,100 @@
-import connection from '../database/db.js';
+import pool from '../database/db.js';
 
-export const crearProducto = async (req, res) => {
-  const { nombre, stock, precio } = req.body;
+/**
+ * Controlador de Clientes para Vitoko's Coffee
+ */
+
+/**
+ * Registrar un nuevo cliente
+ * POST /api/clientes
+ */
+export const crearCliente = async (req, res) => {
+  const { nombre, ciudad, tipo } = req.body;
   try {
-    const [result] = await connection.execute(
-      'INSERT INTO productos (nombre, stock, precio, activo) VALUES (?, ?, ?, 1)',
-      [nombre, stock, precio]
+    const [result] = await pool.execute(
+      'INSERT INTO clientes (nombre, ciudad, tipo, activo) VALUES (?, ?, ?, 1)',
+      [nombre, ciudad, tipo]
     );
-    res.status(201).json({ message: 'Producto creado', id: result.insertId });
+    res.status(201).json({ message: 'Cliente creado', id: result.insertId });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
-export const eliminarProducto = async (req, res) => {
+/**
+ * Desactivar (eliminar) un cliente
+ * DELETE /api/clientes/:id
+ */
+export const eliminarCliente = async (req, res) => {
+  const { id } = req.params;
   try {
-    await connection.execute('UPDATE productos SET activo = 0 WHERE id = ?', [req.params.id]);
-    res.json({ message: 'Producto deshabilitado' });
+    await pool.execute(
+      'UPDATE clientes SET activo = 0 WHERE id = ?',
+      [id]
+    );
+    res.json({ message: 'Cliente desactivado' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
-export const actualizarPrecioProducto = async (req, res) => {
-  const { precio } = req.body;
+/**
+ * Actualizar estado/tipo de cliente (normal <-> premium)
+ * PUT /api/clientes/estado/:id
+ */
+export const actualizarEstadoCliente = async (req, res) => {
+  const { id } = req.params;
+  const { tipo } = req.body;
   try {
-    await connection.execute('UPDATE productos SET precio = ? WHERE id = ?', [precio, req.params.id]);
-    res.json({ message: 'Precio actualizado' });
+    await pool.execute(
+      'UPDATE clientes SET tipo = ? WHERE id = ?',
+      [tipo, id]
+    );
+    res.json({ message: 'Estado de cliente actualizado' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
-export const listarProductosDisponibles = async (req, res) => {
+/**
+ * Listar todos los clientes activos
+ * GET /api/clientes
+ */
+export const listarClientes = async (req, res) => {
   try {
-    const [rows] = await connection.execute('SELECT * FROM productos WHERE activo = 1');
+    const [rows] = await pool.execute(
+      'SELECT id, nombre, ciudad, tipo FROM clientes WHERE activo = 1'
+    );
     res.json(rows);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
-export const incrementarStockProducto = async (req, res) => {
-  const { cantidad } = req.body;
+/**
+ * Listar solo clientes normales
+ * GET /api/clientes/normales
+ */
+export const listarClientesNormales = async (req, res) => {
   try {
-    await connection.execute('UPDATE productos SET stock = stock + ? WHERE id = ?', [cantidad, req.params.id]);
-    res.json({ message: 'Stock incrementado' });
+    const [rows] = await pool.execute(
+      'SELECT id, nombre, ciudad FROM clientes WHERE activo = 1 AND tipo = \'normal\''
+    );
+    res.json(rows);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
-export const listarProductosVendidosSemana = async (req, res) => {
+/**
+ * Listar solo clientes premium
+ * GET /api/clientes/premium
+ */
+export const listarClientesPremium = async (req, res) => {
   try {
-    const [rows] = await connection.execute(`
-      SELECT p.id, p.nombre, SUM(dp.cantidad) AS total_vendidos
-      FROM detalle_pedido dp
-      JOIN productos p ON dp.producto_id = p.id
-      JOIN pedidos pe ON pe.id = dp.pedido_id
-      WHERE YEARWEEK(pe.fecha, 1) = YEARWEEK(CURDATE(), 1)
-      GROUP BY p.id, p.nombre
-    `);
+    const [rows] = await pool.execute(
+      'SELECT id, nombre, ciudad FROM clientes WHERE activo = 1 AND tipo = \'premium\''
+    );
     res.json(rows);
   } catch (error) {
     res.status(500).json({ error: error.message });

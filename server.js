@@ -31,5 +31,3 @@ process.on('SIGINT', async () => {
   await pool.end();
   process.exit(0);
 });
-import cors from 'cors';
-app.use(cors()); 

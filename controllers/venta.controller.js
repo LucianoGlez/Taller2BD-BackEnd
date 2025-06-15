@@ -89,3 +89,21 @@ export const productosVendidosAnio = async (_req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+export const resumenAnualVentas = async (_req, res) => {
+  try {
+    const [rows] = await pool.execute(`
+      SELECT 
+        p.nombre AS producto,
+        SUM(dp.cantidad) AS total_vendidos,
+        SUM(dp.cantidad * dp.precio_unitario) AS total_ingresos
+      FROM detalle_pedido dp
+      JOIN productos p ON dp.producto_id = p.id
+      JOIN pedidos pe ON dp.pedido_id = pe.id
+      WHERE YEAR(pe.fecha) = YEAR(CURDATE())
+      GROUP BY p.nombre
+    `);
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
